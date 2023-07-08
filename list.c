@@ -62,7 +62,7 @@ struct Node* insert(struct LinkedList* list, int type, unsigned char data1[8], l
     newNode->prev = current;
     list->lastAccessed = newNode;
 
-    pthread_mutex_unlock(&list->mutex); // Rilascia il mutex della lista
+    pthread_mutex_unlock(&list->mutex);
     return newNode;
 }
 
@@ -80,9 +80,9 @@ struct Node* insertAT(struct LinkedList* list, int type, unsigned char data1[8],
     } else {
         newNode->data.data2 = data2;
     }
-    pthread_mutex_init(&newNode->mutex, NULL); // Inizializza il mutex del nuovo nodo
+    pthread_mutex_init(&newNode->mutex, NULL);
 
-    pthread_mutex_lock(&list->mutex); // Acquisisce il mutex della lista
+    pthread_mutex_lock(&list->mutex); 
 
     if (list->head == NULL) {
         newNode->prev = NULL;
@@ -90,7 +90,7 @@ struct Node* insertAT(struct LinkedList* list, int type, unsigned char data1[8],
         list->head = newNode;
         list->lastAccessed = newNode;
 
-        pthread_mutex_unlock(&list->mutex); // Rilascia il mutex della lista
+        pthread_mutex_unlock(&list->mutex); 
         return newNode;
     }
 
@@ -100,7 +100,7 @@ struct Node* insertAT(struct LinkedList* list, int type, unsigned char data1[8],
         list->head->prev = newNode;
         list->head = newNode;
 
-        pthread_mutex_unlock(&list->mutex); // Rilascia il mutex della lista
+        pthread_mutex_unlock(&list->mutex); 
         return newNode;
     }
 
@@ -122,18 +122,48 @@ struct Node* insertAT(struct LinkedList* list, int type, unsigned char data1[8],
     current->next = newNode;
     list->lastAccessed = newNode;
 
-    pthread_mutex_unlock(&list->mutex); // Rilascia il mutex della lista
+    pthread_mutex_unlock(&list->mutex); 
     return newNode;
 }
 
+// Funzione per rimuovere il nodo di testa dalla lista
+struct Node* removeHead(struct LinkedList* list) {
+    if (list->head == NULL) {
+        return NULL;
+    }
 
-// Funzione per rimuovere un nodo dalla lista
+    pthread_mutex_lock(&list->mutex); 
+    struct Node* nodeToRemove = list->head;
+    list->head = nodeToRemove->next;
+
+    if (nodeToRemove->next != NULL) {
+        nodeToRemove->next->prev = NULL;
+    }
+
+    pthread_mutex_unlock(&list->mutex); 
+
+    free(nodeToRemove);
+
+    // Aggiornamento del nodo lastAccessed
+    if (list->lastAccessed != NULL) {
+        pthread_mutex_lock(&list->lastAccessed->mutex); 
+        if (list->lastAccessed == nodeToRemove) {
+            list->lastAccessed = NULL;
+        }
+        pthread_mutex_unlock(&list->lastAccessed->mutex); 
+    }
+
+    return list->head;
+}
+
+
+// Funzione per rimuovere un nodo dalla lista usando getAT
 struct Node* removeAT(struct LinkedList* list, struct Node* nodeToRemove) {
     if (list->head == NULL || nodeToRemove == NULL) {
         return NULL;
     }
 
-    pthread_mutex_lock(&list->mutex); // Acquisisce il mutex della lista
+    pthread_mutex_lock(&list->mutex); 
 
     if (list->head == nodeToRemove) {
         list->head = nodeToRemove->next;
@@ -152,11 +182,10 @@ struct Node* removeAT(struct LinkedList* list, struct Node* nodeToRemove) {
         list->lastAccessed = NULL;
     }
 
-    pthread_mutex_unlock(&list->mutex); // Rilascia il mutex della lista
-
-    pthread_mutex_lock(&nodeToRemove->mutex); // Acquisisce il mutex del nodo
+    pthread_mutex_unlock(&list->mutex); 
+    pthread_mutex_lock(&nodeToRemove->mutex); 
     pthread_mutex_destroy(&nodeToRemove->mutex); // Dealloca il mutex del nodo
-    pthread_mutex_unlock(&nodeToRemove->mutex); // Rilascia il mutex del nodo
+    pthread_mutex_unlock(&nodeToRemove->mutex); 
 
     free(nodeToRemove);
 
@@ -166,13 +195,13 @@ struct Node* removeAT(struct LinkedList* list, struct Node* nodeToRemove) {
 
 // Funzione per stampare la lista
 void printList(struct Node* head) {
-    pthread_mutex_lock(&head->mutex); // Acquisisce il mutex del nodo
+    pthread_mutex_lock(&head->mutex); 
     struct Node* current = head;
-    pthread_mutex_unlock(&head->mutex); // Rilascia il mutex del nodo
+    pthread_mutex_unlock(&head->mutex); 
 
     int cont = 0;
     while (current != NULL) {
-        pthread_mutex_lock(&current->mutex); // Acquisisce il mutex del nodo
+        pthread_mutex_lock(&current->mutex); 
 
         printf("Nodo:%d ", cont);
         if (current->type == 0) {
@@ -187,7 +216,7 @@ void printList(struct Node* head) {
         }
 
         struct Node* next = current->next;
-        pthread_mutex_unlock(&current->mutex); // Rilascia il mutex del nodo
+        pthread_mutex_unlock(&current->mutex); 
 
         current = next;
     }
@@ -199,17 +228,17 @@ void* map_list(void* arg) {
     ThreadPool* pool = (ThreadPool*)arg;
     struct LinkedList* list = pool->list;
 
-    pthread_mutex_lock(&list->mutex); // Acquisisce il mutex della lista
+    pthread_mutex_lock(&list->mutex); 
     struct Node* current = list->head;
-    pthread_mutex_unlock(&list->mutex); // Rilascia il mutex della lista
+    pthread_mutex_unlock(&list->mutex); 
 
     while (current != NULL) {
-        pthread_mutex_lock(&current->mutex); // Acquisisce il mutex del nodo
+        pthread_mutex_lock(&current->mutex); 
 
         pool->mapper(current);
 
         struct Node* next = current->next;
-        pthread_mutex_unlock(&current->mutex); // Rilascia il mutex del nodo
+        pthread_mutex_unlock(&current->mutex); 
 
         current = next;
     }
@@ -240,7 +269,7 @@ void wait_for_threads(ThreadPool* pool) {
 
 
 
-// Funzione di mapping personalizzata per raddoppiare gli elementi
+// Funzione di mapping per raddoppiare gli elementi
 void doubleMapper(struct Node* node) {
     if (node->type == 1) {
         node->data.data2 *= 2;
@@ -251,7 +280,7 @@ void doubleMapper(struct Node* node) {
     }
 }
 
-// Funzione per l'applicazione della funzione di mapping a tutti gli elementi della lista
+// Funzione per l'applicazione della funzione di mapping a tutti gli elementi della lista tramite thread
 void map(struct LinkedList* list, int thread_count, void (*mapper)(struct Node*)) {
     ThreadPool pool;
     initialize_thread_pool(&pool, thread_count, list, mapper);
@@ -264,20 +293,20 @@ long double reduce(struct LinkedList* list, long double (*reducer)(long double, 
         return 0.0L;
     }
 
-    pthread_mutex_lock(&list->mutex); // Acquisisce il mutex della lista
+    pthread_mutex_lock(&list->mutex); 
     struct Node* current = list->head;
     long double result = current->type == 1 ? current->data.data2 : 0.0L;
-    pthread_mutex_unlock(&list->mutex); // Rilascia il mutex della lista
+    pthread_mutex_unlock(&list->mutex); 
 
     current = current->next;
 
     while (current != NULL) {
-        pthread_mutex_lock(&current->mutex); // Acquisisce il mutex del nodo
+        pthread_mutex_lock(&current->mutex);
 
         result = reducer(result, current);
 
         struct Node* next = current->next;
-        pthread_mutex_unlock(&current->mutex); // Rilascia il mutex del nodo
+        pthread_mutex_unlock(&current->mutex);
 
         current = next;
     }
@@ -285,7 +314,7 @@ long double reduce(struct LinkedList* list, long double (*reducer)(long double, 
     return result;
 }
 
-// Funzione di riduzione personalizzata per sommare gli elementi
+// Funzione di riduzione  per sommare gli elementi
 long double sumReducer(long double accumulator, struct Node* node) {
     if (node->type == 1) {
         return accumulator + node->data.data2;
@@ -306,51 +335,21 @@ struct Node* getAt(struct LinkedList* list, int position) {
         return NULL;
     }
 
-    pthread_mutex_lock(&list->mutex); // Acquisisce il mutex della lista
+    pthread_mutex_lock(&list->mutex); 
     struct Node* current = list->head;
-    pthread_mutex_unlock(&list->mutex); // Rilascia il mutex della lista
+    pthread_mutex_unlock(&list->mutex); 
 
     int count = 0;
     while (current != NULL && count < position) {
-        pthread_mutex_lock(&current->mutex); // Acquisisce il mutex del nodo
+        pthread_mutex_lock(&current->mutex); 
         struct Node* next = current->next;
-        pthread_mutex_unlock(&current->mutex); // Rilascia il mutex del nodo
+        pthread_mutex_unlock(&current->mutex); 
 
         current = next;
         count++;
     }
 
     return current;
-}
-// Funzione per rimuovere il nodo di testa dalla lista
-struct Node* removeHead(struct LinkedList* list) {
-    if (list->head == NULL) {
-        return NULL;
-    }
-
-    pthread_mutex_lock(&list->mutex); // Acquisisce il mutex della lista
-
-    struct Node* nodeToRemove = list->head;
-    list->head = nodeToRemove->next;
-
-    if (nodeToRemove->next != NULL) {
-        nodeToRemove->next->prev = NULL;
-    }
-
-    pthread_mutex_unlock(&list->mutex); // Rilascia il mutex della lista
-
-    free(nodeToRemove);
-
-    // Aggiornamento del nodo lastAccessed
-    if (list->lastAccessed != NULL) {
-        pthread_mutex_lock(&list->lastAccessed->mutex); // Acquisisce il mutex del nodo
-        if (list->lastAccessed == nodeToRemove) {
-            list->lastAccessed = NULL;
-        }
-        pthread_mutex_unlock(&list->lastAccessed->mutex); // Rilascia il mutex del nodo
-    }
-
-    return list->head;
 }
 
 
@@ -359,8 +358,8 @@ int main() {
     struct LinkedList list1;
     list1.head = NULL;
     list1.lastAccessed = NULL;
-    pthread_mutex_init(&list1.mutex, NULL); // Inizializza il mutex della lista
-
+    pthread_mutex_init(&list1.mutex, NULL);// Inizializza il mutex della lista
+ 
 
     // Inserimento di nodi nella lista
     unsigned char data1_1[8] = {0x11,0x22,0x33,0x44,0x55,0x66,0x77,0x88};
