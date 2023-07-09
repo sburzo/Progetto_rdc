@@ -18,7 +18,7 @@ struct Node {
 // Struttura della lista collegata
 struct LinkedList {
     struct Node* head;
-    struct Node* lastAccessed;
+    struct Node* lastAccessed; //caching
     pthread_mutex_t mutex; // Mutex per garantire l'accesso thread-safe alla lista
 };
 
@@ -183,13 +183,8 @@ struct Node* removeAT(struct LinkedList* list, struct Node* nodeToRemove) {
     }
 
     pthread_mutex_unlock(&list->mutex); 
-    pthread_mutex_lock(&nodeToRemove->mutex); 
-    pthread_mutex_destroy(&nodeToRemove->mutex); // Dealloca il mutex del nodo
-    pthread_mutex_unlock(&nodeToRemove->mutex); 
-
     free(nodeToRemove);
-
-    return nodeToRemove;
+    return nodeToRemove->next;
 }
 
 
@@ -298,7 +293,7 @@ long double reduce(struct LinkedList* list, long double (*reducer)(long double, 
     long double result = current->type == 1 ? current->data.data2 : 0.0L;
     pthread_mutex_unlock(&list->mutex); 
 
-    current = current->next;
+    current=current->next;
 
     while (current != NULL) {
         pthread_mutex_lock(&current->mutex);
@@ -314,18 +309,18 @@ long double reduce(struct LinkedList* list, long double (*reducer)(long double, 
     return result;
 }
 
-// Funzione di riduzione  per sommare gli elementi
+// Funzione di riduzione che calcola il numero di nodo che hanno il primo elemento maggiore di 20
+//o che li somma semplicemente per le liste long double
 long double sumReducer(long double accumulator, struct Node* node) {
     if (node->type == 1) {
         return accumulator + node->data.data2;
     } else {
-        int sum_array = 0;
-        for (int i = 0; i < 8; i++) {
-            if (node->data.data1[i] > 80) {  //confronto con 50
-                sum_array += 1;
-            }
+        int i=0;
+        if(node->data.data1[0]>(unsigned char)20){
+            i=1;
         }
-        return accumulator + sum_array;
+        
+        return accumulator + i;
     }
 }
 
@@ -366,31 +361,29 @@ int main() {
     insert(&list1, 0, data1_1, 0.0L);
 
    
-
     unsigned char data1_2[8] = {0x12,0x23,0x34,0x45,0x56,0x67,0x68,0x54};
     insert(&list1, 0, data1_2, 0.0L);
     
     
-
     unsigned char data1_3[8] = {0x23,0x65,0x23,0x67,0x93,0x56,0x78,0x60};
     insert(&list1, 0, data1_3, 0.0L);
 
     unsigned char data1_4[8] = {0x34,0x76,0x18,0x52,0x89,0x43,0x17,0x78};
-    insertAT(&list1,0,data1_4,0.0L,2);
+    insertAT(&list1,0,data1_4,0.0L,2);// uso insertAT
 
     // Stampa della lista
-    printf("Lista originale unsigned char[8]:\n");
+    printf("Lista originale unsigned char[8] usando insert e insertAT:\n");
     printList(list1.head);
 
     // Rimozione di un nodo dalla lista
-    printf("Rimozione del nodo in posizione 2:\n");
+    printf("Rimozione del nodo in posizione 2 con removeAT getAT:\n");
     struct Node* nodeToRemove = getAt(&list1, 2);
     removeAT(&list1, nodeToRemove);
     printList(list1.head);
 
-    // Somma degli elementi della lista maggiori di 50 in ogni nodo
+    // Somma degli elementi della lista maggiori di 20 in ogni nodo
     long double sum = reduce(&list1, sumReducer);
-    printf("Somma degli elementi della lista maggiori di 50 in ogni nodo(utilizzo reduce): %.2Lf\n", sum);
+    printf("Numero di nodi che hanno il primo elemento maggiore di 20(utilizzo reduce): %.2Lf\n", sum);
 
     // Applicazione della funzione doubleMapper
     printf("\nLista con gli elementi raddoppiati(utilizzo map):\n");
@@ -398,8 +391,7 @@ int main() {
     printList(list1.head);
 
     // Rimozione del nodo in testa alla lista
-    printf("Rimozione del nodo di testa:\n");
-    
+    printf("Rimozione del nodo di testa con removeHead:\n");
     removeHead(&list1);
     printList(list1.head);
 
@@ -444,14 +436,14 @@ int main() {
     long double data2_3 = 13.33L;
     insert(&list2, 1, NULL, data2_3);
     long double data2_4 = 7.86L;
-    insert(&list2, 1, NULL, data2_4);
+    insertAT(&list2, 1, NULL, data2_4,2);
 
     // Stampa della lista
-    printf("Lista originale long double:\n");
+    printf("Lista originale long double usando insert e insertAT:\n");
     printList(list2.head);
 
     // Rimozione di un nodo dalla lista
-    printf("Rimozione del nodo in posizione 1:\n");
+    printf("Rimozione del nodo in posizione 1 con removeAT e getAT:\n");
     struct Node* nodeToRemove2 = getAt(&list2, 1);
     removeAT(&list2, nodeToRemove2);
     printList(list2.head);
@@ -466,8 +458,7 @@ int main() {
     printList(list2.head);
 
     // Rimozione del nodo in testa alla lista
-    printf("Rimozione del nodo di testa:\n");
-    
+    printf("Rimozione del nodo di testa con removeHead:\n");
     removeHead(&list2);
     printList(list2.head);
 

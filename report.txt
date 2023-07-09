@@ -1,0 +1,53 @@
+Report Progetto Sburzacchi Andrea 1936255
+
+Doubly-linked list thread-safe
+
+Questo progetto gestisce una doubly linked list che può supportare due tipi:
+-unsigned char[8]
+-long double
+Il tipo del dato è specificato nel campo type della struttura Node, il programma 
+tiene inoltre traccia dell' ultimo elemento utilizzato nelle varie funzioni (funzione di caching)
+L'intero programma è thread-safe, ovvero garantisce la mutua esclusione e supporta il multi-threading 
+nella funzione map con la struttura thread-pool.
+
+La funzione insert alloca nuova memoria e inserisce un nuovo nodo nella lista in base al tipo di dato 
+inserito indicato nel campo type, se la lista non è vuota la INSERT aggiunge il nuovo nodo in coda agli
+altri elementi e restituisce sempre il nuovo nodo creato
+
+La funzione InsertAT è simile alla precedente differenziandosi solo nel fatto che ci permette di inserire 
+il nuovo nodo nella posizione da noi indicata.
+
+La funzione removeHead rimuove il nodo in testa alla lista deallocandolo e liberando la memoria
+correttamente.Restituisce il nuovo primo elemento della lista.
+
+La funzione removeAT rimuove il nodo nella posizione indicata nella lista deallocandolo e liberando la memoria
+correttamente, se position=0 si comporta come removeHead, restituisce l'elemento successivo
+
+La funzione printList stampa la lista formattando la stampa in base al tipo di dato da stampare
+
+La funzione di map crea un nuovo ThreadPool inizializzandolo con l'apposita funzione "initialize_thread_pool"
+e attende la terminazione dei thread con la funzione  "wait_for_threads", la map in questo caso applica a tutti 
+i nodi della lista il raddoppio degli elementi(usando la funzione doubleMApper), nel caso di unsigned char raddoppia tutti gli elementi degli array 
+nei nodi, la map ovviamente può eseguire qualsiasi funzione che gli passiamo. Puo sfruttare il multi-threading,
+nel test viene eseguita su un solo thread.
+
+La funzione reduce restituisce (con uso di sumReducer):
+-nelle liste unsigned char[8] il numero di nodi che hanno il primo elemento dell'array maggiore di 20
+-nelle liste long double la somma di tutti i nodi 
+anche qui possiamo far svolgere altre funzioni.
+
+La getAT è usata per restituire il nodo nella posizione richiesta, infatti viene usata per l'operazione di raddoppia
+di removeAT o per leggere il contenuto di un certo nodo.
+
+Infine nel main viene inizializzata una nuova lista ed inseriti alcuni valori di test, vengono testate tutte le funzioni
+sviluppate stampando via via la lista modificata, vengono eseguiti prima i test su una lista di tipo unsigned char[8]
+e dopo su una lista di tipo long double. 
+
+
+Compilazione:
+
+gcc list.c -o list -lpthread
+
+
+Esecuzione:
+./list
